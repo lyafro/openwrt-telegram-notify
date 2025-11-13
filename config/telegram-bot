@@ -1,0 +1,5 @@
+config bot 'default'
+	option token ''
+	option chat_id ''
+	option enabled '0'
+	option log_level 'info'

@@ -1,0 +1,2 @@
+#!/bin/sh
+/usr/local/sbin/telegram-bot/plugins/dhcp-notify.sh >/dev/null 2>&1 &
