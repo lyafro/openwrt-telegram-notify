@@ -16,6 +16,7 @@ check_firmware() {
 <b>Check:</b> $(date '+%Y-%m-%d %H:%M:%S')"
 
     send_message "$msg" "HTML"
+    log_msg "info" "Firmware version sent: $version"
 }
 
 [ "$1" = "scheduled" ] && check_firmware

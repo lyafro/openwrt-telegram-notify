@@ -46,6 +46,7 @@ send_message() {
     local parse_mode="${2:-HTML}"
 
     if [ "$TELEGRAM_ENABLED" != "1" ]; then
+        log_msg "warn" "Telegram disabled, skip message"
         return 1
     fi
 
@@ -60,10 +61,10 @@ send_message() {
     response=$(curl -s --max-time "$CURL_TIMEOUT" --connect-timeout 5         -X POST "$url"         --data-urlencode "chat_id=$TELEGRAM_CHAT_ID"         --data-urlencode "text=$text"         --data-urlencode "parse_mode=$parse_mode" 2>&1 || echo '{"ok":false}')
 
     if echo "$response" | grep -q '"ok":true'; then
-        log_msg "info" "Message sent"
+        log_msg "info" "Message sent: $(printf '%.50s' "$text")"
         return 0
     else
-        log_msg "error" "Send failed"
+        log_msg "error" "Send failed: $response"
         return 1
     fi
 }
