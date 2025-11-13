@@ -4,375 +4,188 @@
 [![OpenWrt](https://img.shields.io/badge/OpenWrt-19.07%2B-blue)](https://openwrt.org)
 [![Shell Script](https://img.shields.io/badge/Language-Shell%20Script-green)](https://www.shellscript.sh)
 
-Lightweight and secure Telegram notifications for OpenWrt routers. Get real-time alerts for device connections, WiFi events, system resource changes, and network status updates.
+Lightweight Telegram notifications for OpenWrt routers. Real-time alerts for device connections, WiFi events, system monitoring, and network status.
 
 ## 🚀 Quick Start
 
-### Direct Installation on Router
+### Direct from Router
 
 ```bash
-# Download and extract
 cd /tmp
-wget https://github.com/lyafro/openwrt-telegram-notify/archive/refs/heads/main.zip
-unzip main.zip
-cd openwrt-telegram-notify-main
-
-# Install
+wget https://github.com/lyafro/openwrt-telegram-notify/archive/refs/heads/main.tar.gz -O main.tgz
+tar xzf main.tgz && cd openwrt-telegram-notify-main
 bash INSTALL.sh
 ```
 
-### From Local Machine
+### From PC
 
 ```bash
-# Clone repository
 git clone https://github.com/lyafro/openwrt-telegram-notify.git
 cd openwrt-telegram-notify
-
-# Transfer to router via wget
-scp openwrt-telegram-notify.tar.gz root@ROUTER_IP:/tmp/
-# OR
-ssh root@ROUTER_IP "cd /tmp && wget https://github.com/lyafro/openwrt-telegram-notify/archive/refs/heads/main.zip && unzip main.zip && cd openwrt-telegram-notify-main && bash INSTALL.sh"
+bash INSTALL.sh
 ```
 
-## ⚙️ Configuration
+## ⚙️ Setup (5 Steps)
 
-### 1. Create Telegram Bot
+**1. Create Bot**
+- Message [@BotFather](https://t.me/botfather): `/newbot`
+- Save your **API Token**
 
-Message [@BotFather](https://t.me/botfather) on Telegram:
-
-```
-/newbot
-```
-
-Follow the prompts and save your **API Token**.
-
-### 2. Get Chat ID
-
+**2. Get Chat ID**
 ```bash
-curl "https://api.telegram.org/bot<YOUR_TOKEN>/getUpdates"
+curl "https://api.telegram.org/bot<TOKEN>/getUpdates"
 ```
 
-Look for `"id": <YOUR_CHAT_ID>` in the response.
-
-### 3. Configure on Router
-
+**3. Configure Router**
 ```bash
-# Set token
-uci set telegram-notify.default.token='123456:ABCdefGHIjklmnoPQRstuvWXYZ'
-
-# Set chat ID
-uci set telegram-notify.default.chat_id='987654321'
-
-# Enable notifications
+uci set telegram-notify.default.token='YOUR_TOKEN'
+uci set telegram-notify.default.chat_id='YOUR_CHAT_ID'
 uci set telegram-notify.default.enabled='1'
-
-# Apply changes
 uci commit telegram-notify
 ```
 
-### 4. Verify Configuration
-
+**4. Verify**
 ```bash
 uci show telegram-notify.default
 ```
 
-### 5. Test
-
+**5. Test**
 ```bash
 /usr/local/sbin/telegram-notify/plugins/sysmon.sh stats
 ```
 
-You should receive a system status message in Telegram.
+## 📊 Events
 
-## 📊 Features
-
-### Event Notifications
-
-| Event | Plugin | Description |
-|-------|--------|-------------|
-| 🟢 Device Connected | dhcp-notify.sh | New DHCP lease acquired |
-| 🔴 Device Disconnected | dhcp-notify.sh | DHCP lease expired |
-| 📱 WiFi Client Join | wifi-notify.sh | New WiFi association |
-| 📵 WiFi Client Leave | wifi-notify.sh | WiFi disassociation |
-| 🖥️ System Status | sysmon.sh | CPU, memory, disk, uptime |
-| ⚠️ Memory Alert | sysmon.sh | High memory usage (>85%) |
-| 🌐 WAN Status | network-monitor.sh | Internet connection changes |
-| 🔴 Interface Down | network-monitor.sh | Network interface failures |
-| 📦 Firmware Version | firmware-check.sh | OpenWrt version tracking |
-
-### Automatic Monitoring Schedule
-
-By default, the following cron tasks are enabled:
-
-```
-*/5  * * * *  WAN connectivity check (every 5 minutes)
-0    * * * *  Memory alert check (hourly)
-0    9 * * *  System status report (daily 9:00 AM)
-0    8 * * *  Firmware version check (daily 8:00 AM)
-0   12 * * *  Interface status report (daily 12:00 PM)
-```
+| Event | Description |
+|-------|-------------|
+| 🟢 Device Connected | New DHCP lease |
+| 🔴 Device Disconnected | DHCP lease expired |
+| 📱 WiFi Join | New WiFi association |
+| 📵 WiFi Leave | WiFi disassociation |
+| 🖥️ System Status | CPU, memory, disk, uptime |
+| ⚠️ Memory Alert | Usage >85% |
+| 🌐 WAN Status | Internet changes |
+| 🔴 Interface Down | Network failures |
+| 📦 Firmware Version | OpenWrt version |
 
 ## 🔧 Usage
 
-### Manual Commands
-
 ```bash
-# System status snapshot
+# System status
 /usr/local/sbin/telegram-notify/plugins/sysmon.sh stats
 
-# Check for memory alerts
+# Memory check
 /usr/local/sbin/telegram-notify/plugins/sysmon.sh check-alert
 
-# Check WAN status
+# WAN status
 /usr/local/sbin/telegram-notify/plugins/network-monitor.sh wan-check
 
-# Check all interfaces
+# All interfaces
 /usr/local/sbin/telegram-notify/plugins/network-monitor.sh all
 
-# Send custom message from terminal
+# Custom message
 . /usr/local/sbin/telegram-notify/core.sh
-send_message "Custom notification message"
+send_message "Message"
 ```
 
-### View Logs
+## 📋 Requirements
 
-```bash
-# Last 50 lines
-tail -50 /usr/local/sbin/telegram-notify/logs/bot.log
-
-# Follow in real-time
-tail -f /usr/local/sbin/telegram-notify/logs/bot.log
-```
-
-### Manage Cron Tasks
-
-```bash
-# View all cron tasks
-crontab -l
-
-# Edit cron tasks
-crontab -e
-
-# Restart cron service
-/etc/init.d/cron restart
-```
-
-### Disable/Enable Notifications
-
-```bash
-# Disable
-uci set telegram-notify.default.enabled='0'
-uci commit telegram-notify
-
-# Enable
-uci set telegram-notify.default.enabled='1'
-uci commit telegram-notify
-```
+- OpenWrt 19.07+
+- Packages: `curl`, `ca-bundle`, `cron`
+- Internet connection
 
 ## 🔒 Security
 
-- ✅ Configuration stored with restricted permissions (mode 600)
-- ✅ Cache and logs protected (mode 700)
-- ✅ No credentials in log files
-- ✅ Request timeouts on API calls (10 seconds)
-- ✅ URL-encoded data protection
-- ✅ Lock mechanism prevents race conditions
-- ✅ Automatic log rotation with gzip compression
-- ✅ Minimal dependencies (curl, ca-bundle, cron)
-
-### Best Practices
-
-1. **Use App Passwords** - For Gmail or other 2FA-enabled services
-2. **Restrict Permissions** - Review `/etc/config/telegram-notify`
-3. **Regular Updates** - Check for new versions of OpenWrt
-4. **Monitor Logs** - Review `/usr/local/sbin/telegram-notify/logs/bot.log` regularly
-5. **Test Configuration** - Run manual tests after setup
-
-
-## 📋 System Requirements
-
-- **OpenWrt/LEDE** version 19.07 or later
-- **Packages**: `curl`, `ca-bundle`, `cron`
-- **Storage**: ~50 KB (after installation)
-- **RAM**: ~1 MB average
-- **Internet**: Active connection for Telegram API
-
-### Install Dependencies Manually
-
-```bash
-opkg update
-opkg install curl ca-bundle cron
-```
+- ✅ Config protected (600 permissions)
+- ✅ No credentials in logs
+- ✅ Request timeouts (10s)
+- ✅ Lock mechanism
+- ✅ Log rotation with gzip
 
 ## 🐛 Troubleshooting
 
-### Messages Not Sending
-
-1. **Check Internet Connection**
-   ```bash
-   ping 8.8.8.8
-   ping api.telegram.org
-   ```
-
-2. **Verify Configuration**
-   ```bash
-   uci show telegram-notify.default
-   ```
-
-3. **Test API Token**
-   ```bash
-   curl -X GET "https://api.telegram.org/bot<YOUR_TOKEN>/getMe"
-   ```
-
-4. **Check Logs**
-   ```bash
-   tail -f /usr/local/sbin/telegram-notify/logs/bot.log
-   ```
-
-### High Memory Usage
-
-- Reduce cron frequency (increase intervals)
-- Disable unused plugins by commenting cron lines
-- Clear old logs: `rm /usr/local/sbin/telegram-notify/logs/bot.log*`
-
-### Cannot Transfer File via SCP
-
-Use wget instead:
-
+**No messages?**
 ```bash
-# On router
-cd /tmp
-wget https://github.com/lyafro/openwrt-telegram-notify/archive/refs/heads/main.zip
-unzip main.zip
-cd openwrt-telegram-notify-main
-bash INSTALL.sh
+ping 8.8.8.8
+uci show telegram-notify.default
+tail -f /usr/local/sbin/telegram-notify/logs/bot.log
+curl -X GET "https://api.telegram.org/bot<TOKEN>/getMe"
 ```
 
-### Cron Tasks Not Running
+**High memory?**
+- Reduce cron frequency
+- Clear logs: `rm /usr/local/sbin/telegram-notify/logs/bot.log*`
 
+**Cron not running?**
 ```bash
-# Verify cron is enabled and running
 /etc/init.d/cron enable
 /etc/init.d/cron start
-
-# Check cron logs
 logread | grep CRON
 ```
 
-### Strange Behavior After Update
+## 🎯 Advanced
 
+**Customize cron schedule:**
 ```bash
-# Clear cache
-rm -rf /usr/local/sbin/telegram-notify/cache/*
-
-# Restart services
+crontab -e
+# Edit intervals and save
 /etc/init.d/cron restart
 ```
 
-## 🎯 Advanced Configuration
-
-### Customize Cron Schedule
-
-Edit `/etc/crontabs/root` and modify timing:
-
+**Add custom notification:**
 ```bash
-# Check WAN every 10 minutes (instead of 5)
-*/10 * * * * /usr/local/sbin/telegram-notify/plugins/network-monitor.sh wan-check >/dev/null 2>&1
-
-# System status every 6 hours instead of daily
-0 */6 * * * /usr/local/sbin/telegram-notify/plugins/sysmon.sh stats >/dev/null 2>&1
-```
-
-Then restart cron:
-```bash
-/etc/init.d/cron restart
-```
-
-### Add Custom Notifications
-
-Create `/usr/local/sbin/telegram-notify/plugins/custom.sh`:
-
-```bash
+cat > /usr/local/sbin/telegram-notify/plugins/custom.sh << 'EOF'
 #!/bin/sh
 set -euf
-
 . /usr/local/sbin/telegram-notify/core.sh || exit 1
-
-[ "$TELEGRAM_ENABLED" != "1" ] && exit 0
-
-# Your custom logic here
-local msg="🔧 <b>Custom Event</b>
-Custom data here"
-
-send_message "$msg" "HTML"
-```
-
-Make it executable:
-```bash
+[ "$TELEGRAM_ENABLED" = "1" ] && send_message "Custom event"
+EOF
 chmod 755 /usr/local/sbin/telegram-notify/plugins/custom.sh
 ```
 
-Add to crontab:
-```bash
-0 10 * * * /usr/local/sbin/telegram-notify/plugins/custom.sh >/dev/null 2>&1
-```
-
-### Disable Specific Event Types
-
-Comment out unwanted cron lines:
-
+**Disable specific events:**
 ```bash
 crontab -e
-
-# Disable WAN checks (add # at start of line)
-#*/5 * * * * /usr/local/sbin/telegram-notify/plugins/network-monitor.sh wan-check >/dev/null 2>&1
-
-# Save and exit
+# Comment out unwanted lines and save
 ```
 
-## 📊 Performance Impact
+## 📊 Cron Schedule
 
-| Metric | Impact |
-|--------|--------|
-| CPU Usage | Minimal (~0.1% per check) |
-| Memory | ~1 MB resident |
-| Disk I/O | Negligible |
-| Network | Minimal (~1 KB per message) |
-
-Performance is optimized with background execution and caching.
-
-## 🔄 Updates & Maintenance
-
-### Check for Updates
-
-```bash
-cd /tmp
-wget https://github.com/lyafro/openwrt-telegram-notify/archive/refs/heads/main.zip
-unzip main.zip
-cd openwrt-telegram-notify-main
-diff telegram-notify/core.sh /usr/local/sbin/telegram-notify/core.sh
+```
+*/5  * * * *  WAN check (5 min)
+0    * * * *  Memory alert (hourly)
+0    9 * * *  System status (9 AM)
+0    8 * * *  Firmware check (8 AM)
+0   12 * * *  Interface status (12 PM)
 ```
 
-### Upgrade
+## 📂 Structure
 
-```bash
-# Backup current config
-cp /etc/config/telegram-notify /etc/config/telegram-notify.bak
-
-# Run installer
-bash INSTALL.sh
-
-# Verify
-uci show telegram-notify.default
 ```
-
-## 📖 Documentation
-
-- [OpenWrt Wiki](https://openwrt.org/docs/start)
-- [Telegram Bot API](https://core.telegram.org/bots/api)
-- [Hotplug Documentation](https://openwrt.org/docs/guide-user/base-system/hotplug)
-
+├── telegram-notify/
+│   ├── core.sh              # Main engine
+│   └── plugins/
+│       ├── dhcp-notify.sh   # Device events
+│       ├── wifi-notify.sh   # WiFi events
+│       ├── sysmon.sh        # System monitoring
+│       ├── network-monitor.sh
+│       └── firmware-check.sh
+├── hotplug/
+│   ├── dhcp/98-telegram-notify
+│   └── hostapd/98-telegram-notify
+└── config/telegram-notify
+```
 
 ## 📝 License
 
-This project is released into the **public domain**. You are free to use, modify, and distribute it as you see fit, with no restrictions or attribution required.
+Public Domain. Free to use and modify.
+
+## 📖 Links
+
+- [OpenWrt Docs](https://openwrt.org/docs/start)
+- [Telegram Bot API](https://core.telegram.org/bots/api)
+- [Hotplug Docs](https://openwrt.org/docs/guide-user/base-system/hotplug)
+
+---
+
+**Version:** 1.0.1 | **OpenWrt:** 19.07+
