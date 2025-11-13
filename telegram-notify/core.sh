@@ -1,19 +1,20 @@
 #!/bin/sh
 set -euf
 
-# Telegram Notifier Core Module
-
 BOT_DIR="${BOT_DIR:-/usr/local/sbin/telegram-notify}"
 BOT_LOCK="$BOT_DIR/.lock"
 CURL_TIMEOUT=10
 MAX_LOG_SIZE=$((10 * 1024 * 1024))
 
 load_config() {
-    eval "$(uci -q show telegram-notify.default 2>/dev/null || echo '')"
-    TELEGRAM_TOKEN="${default_token:-}"
-    TELEGRAM_CHAT_ID="${default_chat_id:-}"
-    TELEGRAM_ENABLED="${default_enabled:-0}"
+    TELEGRAM_TOKEN=$(uci -q get telegram-notify.default.token)
+    TELEGRAM_CHAT_ID=$(uci -q get telegram-notify.default.chat_id)
+    TELEGRAM_ENABLED=$(uci -q get telegram-notify.default.enabled)
     LOG_FILE="$BOT_DIR/logs/bot.log"
+
+    TELEGRAM_TOKEN="${TELEGRAM_TOKEN:-}"
+    TELEGRAM_CHAT_ID="${TELEGRAM_CHAT_ID:-}"
+    TELEGRAM_ENABLED="${TELEGRAM_ENABLED:-0}"
 
     if [ -z "$TELEGRAM_TOKEN" ] || [ -z "$TELEGRAM_CHAT_ID" ]; then
         return 1
