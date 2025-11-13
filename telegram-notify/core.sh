@@ -1,15 +1,15 @@
 #!/bin/sh
 set -euf
 
-# Telegram Bot Core Module
+# Telegram Notifier Core Module
 
-BOT_DIR="${BOT_DIR:-/usr/local/sbin/telegram-bot}"
+BOT_DIR="${BOT_DIR:-/usr/local/sbin/telegram-notify}"
 BOT_LOCK="$BOT_DIR/.lock"
 CURL_TIMEOUT=10
 MAX_LOG_SIZE=$((10 * 1024 * 1024))
 
 load_config() {
-    eval "$(uci -q show telegram-bot.default 2>/dev/null || echo '')"
+    eval "$(uci -q show telegram-notify.default 2>/dev/null || echo '')"
     TELEGRAM_TOKEN="${default_token:-}"
     TELEGRAM_CHAT_ID="${default_chat_id:-}"
     TELEGRAM_ENABLED="${default_enabled:-0}"

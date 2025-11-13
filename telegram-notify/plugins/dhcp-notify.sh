@@ -1,7 +1,7 @@
 #!/bin/sh
 set -euf
 
-. /usr/local/sbin/telegram-bot/core.sh || exit 1
+. /usr/local/sbin/telegram-notify/core.sh || exit 1
 
 [ "$TELEGRAM_ENABLED" != "1" ] && exit 0
 
