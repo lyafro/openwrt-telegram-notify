@@ -9,7 +9,7 @@ check_wan() {
     local iface="${1:-wan}"
     local ip
 
-    ip=$(ip -4 addr show "$iface" 2>/dev/null | grep -oP '(?<=inet\s)\d+(\.\d+){3}' | head -1 || echo "")
+    ip=$(ip -4 addr show "$iface" 2>/dev/null | sed -n 's/.*inet \([0-9.]\+\).*/\1/p' | head -1 || echo "")
 
     if [ -z "$ip" ]; then
         if ! cache_get "wan_down" >/dev/null 2>&1; then
@@ -32,7 +32,7 @@ check_interfaces() {
     for iface in lan wan wan2; do
         local status ip
         status=$(ip link show "$iface" 2>/dev/null | grep -o 'UP\|DOWN' | head -1 || echo "")
-        ip=$(ip -4 addr show "$iface" 2>/dev/null | grep -oP '(?<=inet\s)\d+(\.\d+){3}' | head -1 || echo "")
+        ip=$(ip -4 addr show "$iface" 2>/dev/null | sed -n 's/.*inet \([0-9.]\+\).*/\1/p' | head -1 || echo "")
 
         if [ -n "$status" ]; then
             local emoji="🟢"
