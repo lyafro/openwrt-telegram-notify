@@ -4,7 +4,7 @@ set -euf
 
 [ "$TELEGRAM_ENABLED" = "1" ] || exit 0
 
-BACKUP_DIR="/usr/local/sbin/telegram-notify/config-backup"
+BACKUP_DIR="$BOT_DIR/config-backup"
 mkdir -p "$BACKUP_DIR"
 
 CHANGED=""
@@ -14,11 +14,16 @@ for cfg in /etc/config/*; do
     name=$(basename "$cfg")
     bak="$BACKUP_DIR/$name.bak"
 
-    if [ ! -f "$bak" ] || ! cmp -s "$cfg" "$bak" 2>/dev/null; then
-        CHANGED="${CHANGED}$([ -f "$bak" ] && echo "*" || echo "+")$name "
-        cp "$cfg" "$bak" 2>/dev/null || true
+    if [ ! -f "$bak" ]; then
+        CHANGED="$CHANGED +$name"
+        cp "$cfg" "$bak"
+    elif ! cmp -s "$cfg" "$bak" 2>/dev/null; then
+        CHANGED="$CHANGED *$name"
+        cp "$cfg" "$bak"
     fi
 done
 
-[ -n "$CHANGED" ] && send_message "⚙️ <b>Config Modified</b>
+if [ -n "$CHANGED" ]; then
+    send_message "⚙️ <b>Config Modified</b>
 <b>Files:</b> <code>$CHANGED</code>" "HTML"
+fi
