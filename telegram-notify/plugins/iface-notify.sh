@@ -8,7 +8,7 @@ set -euf
 
 case "$ACTION" in
     ifup)
-        local ip=$(ip -4 addr show "$INTERFACE" 2>/dev/null | sed -n 's/.*inet \([0-9.]\+\).*//p' | head -1)
+        local ip=$(ip -4 addr show "$INTERFACE" 2>/dev/null | sed -n 's/.*inet \([0-9.]\+\).*/\1/p' | head -1)
         if [ -z "$ip" ]; then
             exit 0
         fi
