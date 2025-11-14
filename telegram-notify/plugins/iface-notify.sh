@@ -1,28 +1,24 @@
 #!/bin/sh
 set -euf
-. /usr/local/sbin/telegram-notify/core.sh || exit 1
-[ "$TELEGRAM_ENABLED" != "1" ] && exit 0
+. /usr/local/sbin/telegram-notify/core.sh
 
-iface="${INTERFACE:-}" action="${ACTION:-}"
-[ -z "$iface" ] && exit 0
+[ "$TELEGRAM_ENABLED" = "1" ] || exit 0
+[ -n "$INTERFACE" ] && [ -n "$ACTION" ] || exit 0
 
-case "$action" in
+case "$ACTION" in
     ifup)
-        ip=$(ip -4 addr show "$iface" 2>/dev/null | sed -n 's/.*inet \([0-9.]\+\).*//p' | head -1)
-        if [ -n "$ip" ]; then
-            if ! cache_get "iface_up_$iface" >/dev/null 2>&1; then
-                send_message "🟢 <b>Interface UP</b>
-<b>Name:</b> <code>$iface</code>
+        local ip=$(ip -4 addr show "$INTERFACE" 2>/dev/null | sed -n 's/.*inet \([0-9.]\+\).*//p' | head -1)
+        [ -z "$ip" ] && exit 0
+        cache_get "iface_up_$INTERFACE" >/dev/null 2>&1 && exit 0
+        send_message "🟢 <b>Interface UP</b>
+<b>Name:</b> <code>$INTERFACE</code>
 <b>IP:</b> <code>$ip</code>" "HTML"
-                cache_set "iface_up_$iface" "1" 600
-            fi
-        fi
+        cache_set "iface_up_$INTERFACE" "1" 600
         ;;
     ifdown)
-        if ! cache_get "iface_down_$iface" >/dev/null 2>&1; then
-            send_message "🔴 <b>Interface DOWN</b>
-<b>Name:</b> <code>$iface</code>" "HTML"
-            cache_set "iface_down_$iface" "1" 600
-        fi
+        cache_get "iface_down_$INTERFACE" >/dev/null 2>&1 && exit 0
+        send_message "🔴 <b>Interface DOWN</b>
+<b>Name:</b> <code>$INTERFACE</code>" "HTML"
+        cache_set "iface_down_$INTERFACE" "1" 600
         ;;
 esac

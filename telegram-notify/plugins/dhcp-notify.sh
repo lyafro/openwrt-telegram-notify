@@ -1,27 +1,26 @@
 #!/bin/sh
 set -euf
-. /usr/local/sbin/telegram-notify/core.sh || exit 1
-[ "$TELEGRAM_ENABLED" != "1" ] && exit 0
+. /usr/local/sbin/telegram-notify/core.sh
 
-action="${ACTION:-}" mac="${MACADDR:-}" ip="${IPADDR:-}" hostname="${HOSTNAME:-unknown}"
-[ -z "$action" ] || [ -z "$mac" ] || [ -z "$ip" ] && exit 0
+[ "$TELEGRAM_ENABLED" = "1" ] || exit 0
+[ -n "$ACTION" ] && [ -n "$MACADDR" ] && [ -n "$IPADDR" ] || exit 0
 
-mac=$(printf '%s' "$mac" | tr 'a-z' 'A-Z')
+MAC=$(printf '%s' "$MACADDR" | tr 'a-z' 'A-Z')
+HOSTNAME="${HOSTNAME:-unknown}"
 
-case "$action" in
+case "$ACTION" in
     add)
-        if ! cache_get "dhcp_$mac" >/dev/null 2>&1; then
-            send_message "🟢 <b>Device Connected</b>
-<b>MAC:</b> <code>$mac</code>
-<b>IP:</b> <code>$ip</code>
-<b>Host:</b> <code>$hostname</code>" "HTML"
-            cache_set "dhcp_$mac" "1" 600
-        fi
+        cache_get "dhcp_$MAC" >/dev/null 2>&1 && exit 0
+        send_message "🟢 <b>Device Connected</b>
+<b>MAC:</b> <code>$MAC</code>
+<b>IP:</b> <code>$IPADDR</code>
+<b>Host:</b> <code>$HOSTNAME</code>" "HTML"
+        cache_set "dhcp_$MAC" "1" 600
         ;;
     remove)
         send_message "🔴 <b>Device Disconnected</b>
-<b>MAC:</b> <code>$mac</code>
-<b>IP:</b> <code>$ip</code>" "HTML"
-        cache_del "dhcp_$mac"
+<b>MAC:</b> <code>$MAC</code>
+<b>IP:</b> <code>$IPADDR</code>" "HTML"
+        cache_del "dhcp_$MAC"
         ;;
 esac

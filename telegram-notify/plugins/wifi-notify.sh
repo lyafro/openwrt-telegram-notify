@@ -1,26 +1,24 @@
 #!/bin/sh
 set -euf
-. /usr/local/sbin/telegram-notify/core.sh || exit 1
-[ "$TELEGRAM_ENABLED" != "1" ] && exit 0
+. /usr/local/sbin/telegram-notify/core.sh
 
-action="${ACTION:-}" address="${ADDRESS:-}" interface="${INTERFACE:-}"
-[ -z "$action" ] || [ -z "$address" ] || [ -z "$interface" ] && exit 0
+[ "$TELEGRAM_ENABLED" = "1" ] || exit 0
+[ -n "$ACTION" ] && [ -n "$ADDRESS" ] && [ -n "$INTERFACE" ] || exit 0
 
-address=$(printf '%s' "$address" | tr 'a-z' 'A-Z')
-band=$(case "$interface" in *5g*) echo "5GHz" ;; *6g*) echo "6GHz" ;; *) echo "2.4GHz" ;; esac)
+MAC=$(printf '%s' "$ADDRESS" | tr 'a-z' 'A-Z')
+BAND=$(case "$INTERFACE" in *5g*) echo "5GHz" ;; *6g*) echo "6GHz" ;; *) echo "2.4GHz" ;; esac)
 
-case "$action" in
+case "$ACTION" in
     add)
-        if ! cache_get "wifi_$address" >/dev/null 2>&1; then
-            send_message "📱 <b>WiFi Connected</b>
-<b>MAC:</b> <code>$address</code>
-<b>Band:</b> $band" "HTML"
-            cache_set "wifi_$address" "1" 900
-        fi
+        cache_get "wifi_$MAC" >/dev/null 2>&1 && exit 0
+        send_message "📱 <b>WiFi Connected</b>
+<b>MAC:</b> <code>$MAC</code>
+<b>Band:</b> $BAND" "HTML"
+        cache_set "wifi_$MAC" "1" 900
         ;;
     remove)
         send_message "📵 <b>WiFi Disconnected</b>
-<b>MAC:</b> <code>$address</code>" "HTML"
-        cache_del "wifi_$address"
+<b>MAC:</b> <code>$MAC</code>" "HTML"
+        cache_del "wifi_$MAC"
         ;;
 esac

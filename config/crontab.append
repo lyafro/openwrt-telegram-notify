@@ -1,7 +1,7 @@
-0 * * * * /usr/local/sbin/telegram-notify/plugins/sysmon.sh check-alert >/dev/null 2>&1
+0 * * * * /usr/local/sbin/telegram-notify/plugins/sysmon.sh alert >/dev/null 2>&1
 0 9 * * * /usr/local/sbin/telegram-notify/plugins/sysmon.sh stats >/dev/null 2>&1
-0 8 * * * /usr/local/sbin/telegram-notify/plugins/firmware-check.sh scheduled >/dev/null 2>&1
-0 12 * * * /usr/local/sbin/telegram-notify/plugins/network-monitor.sh all >/dev/null 2>&1
+0 8 * * * /usr/local/sbin/telegram-notify/plugins/firmware-check.sh >/dev/null 2>&1
+0 12 * * * /usr/local/sbin/telegram-notify/plugins/network-monitor.sh >/dev/null 2>&1
 */5 * * * * /usr/local/sbin/telegram-notify/plugins/ssh-monitor.sh >/dev/null 2>&1
 */3 * * * * /usr/local/sbin/telegram-notify/plugins/config-monitor.sh >/dev/null 2>&1
 */5 * * * * /usr/local/sbin/telegram-notify/core.sh process-queue >/dev/null 2>&1

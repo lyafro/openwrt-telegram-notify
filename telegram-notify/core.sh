@@ -1,154 +1,122 @@
 #!/bin/sh
+# OpenWrt Telegram Notify - Core Engine
+# Supports: OpenWrt 19.07+, 21.02+, 22.03+, 23.05+, 24.10+
+
 set -euf
 
 BOT_DIR="${BOT_DIR:-/usr/local/sbin/telegram-notify}"
-BOT_LOCK="$BOT_DIR/.lock"
+LOG_FILE="$BOT_DIR/logs/bot.log"
+QUEUE_DIR="$BOT_DIR/queue"
+CACHE_DIR="$BOT_DIR/cache"
 CURL_TIMEOUT=10
 MAX_LOG_SIZE=$((10 * 1024 * 1024))
 
+# Load configuration from UCI
 load_config() {
-    TELEGRAM_TOKEN=$(uci -q get telegram-notify.default.token)
-    TELEGRAM_CHAT_ID=$(uci -q get telegram-notify.default.chat_id)
-    TELEGRAM_ENABLED=$(uci -q get telegram-notify.default.enabled)
-    LOG_FILE="$BOT_DIR/logs/bot.log"
-
-    TELEGRAM_TOKEN="${TELEGRAM_TOKEN:-}"
-    TELEGRAM_CHAT_ID="${TELEGRAM_CHAT_ID:-}"
-    TELEGRAM_ENABLED="${TELEGRAM_ENABLED:-0}"
+    TELEGRAM_TOKEN=$(uci -q get telegram-notify.default.token 2>/dev/null || echo "")
+    TELEGRAM_CHAT_ID=$(uci -q get telegram-notify.default.chat_id 2>/dev/null || echo "")
+    TELEGRAM_ENABLED=$(uci -q get telegram-notify.default.enabled 2>/dev/null || echo "0")
 }
 
+# Logging with rotation
 log_msg() {
     local level="$1"
     shift
-    local message="$*"
-    local timestamp=$(date '+%Y-%m-%d %H:%M:%S')
+    local msg="$*"
+    local ts=$(date '+%Y-%m-%d %H:%M:%S')
 
     mkdir -p "$BOT_DIR/logs"
     printf '%s [%s] %s
-' "[$timestamp]" "$level" "$message" >> "$LOG_FILE" 2>/dev/null || true
+' "[$ts]" "$level" "$msg" >> "$LOG_FILE" 2>/dev/null || true
 
-    logger -t "telegram-notify" -p "user.${level}" "$message" 2>/dev/null || true
+    # Also send to syslog
+    logger -t telegram-notify -p "user.$level" "$msg" 2>/dev/null || true
 
+    # Log rotation
     if [ -f "$LOG_FILE" ]; then
         local size=$(stat -c%s "$LOG_FILE" 2>/dev/null || stat -f%z "$LOG_FILE" 2>/dev/null || echo 0)
         if [ "$size" -gt "$MAX_LOG_SIZE" ]; then
-            gzip -c "$LOG_FILE" > "$LOG_FILE.$(date +%s).gz" 2>/dev/null &&             : > "$LOG_FILE" 2>/dev/null || true
+            gzip "$LOG_FILE" && mv "$LOG_FILE".gz "$LOG_FILE.$(date +%s).gz" 2>/dev/null || true
+            : > "$LOG_FILE"
         fi
     fi
 }
 
-send_message_with_retry() {
-    local text="$1"
-    local parse_mode="${2:-HTML}"
-    local attempt=1
-    local backoff=1
+# Send message with retry logic
+send_message() {
+    local text="$1" parse_mode="${2:-HTML}"
+    local attempt=1 wait=1
 
-    if [ "$TELEGRAM_ENABLED" != "1" ]; then
-        return 1
-    fi
-
-    if [ -z "$TELEGRAM_TOKEN" ] || [ -z "$TELEGRAM_CHAT_ID" ]; then
-        log_msg "error" "Token or chat_id not configured"
-        return 1
-    fi
+    [ "$TELEGRAM_ENABLED" = "1" ] || return 1
+    [ -n "$TELEGRAM_TOKEN" ] || { log_msg error "Token not set"; return 1; }
+    [ -n "$TELEGRAM_CHAT_ID" ] || { log_msg error "Chat ID not set"; return 1; }
 
     while [ $attempt -le 3 ]; do
-        local url="https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage"
         local response
+        response=$(curl -s --max-time "$CURL_TIMEOUT" --connect-timeout 5             -X POST "https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage"             --data-urlencode "chat_id=$TELEGRAM_CHAT_ID"             --data-urlencode "text=$text"             --data-urlencode "parse_mode=$parse_mode" 2>&1)
 
-        response=$(curl -s -w "
-%{http_code}" --max-time "$CURL_TIMEOUT" --connect-timeout 5             -X POST "$url"             --data-urlencode "chat_id=$TELEGRAM_CHAT_ID"             --data-urlencode "text=$text"             --data-urlencode "parse_mode=$parse_mode" 2>&1 || echo '{"ok":false}
-000')
-
-        local http_code=$(echo "$response" | tail -1)
-
-        if [ "$http_code" = "200" ]; then
-            log_msg "info" "Message sent (attempt $attempt)"
+        if echo "$response" | grep -q '"ok":true'; then
+            log_msg info "Message sent (attempt $attempt)"
             return 0
-        elif [ "$http_code" = "429" ]; then
-            log_msg "warn" "Rate limited (429). Waiting ${backoff}s..."
-            sleep "$backoff"
-            backoff=$((backoff * 2))
-            attempt=$((attempt + 1))
-        else
-            log_msg "warn" "Send failed HTTP $http_code (attempt $attempt), retry in ${backoff}s"
-            sleep "$backoff"
-            backoff=$((backoff * 2))
-            attempt=$((attempt + 1))
         fi
+
+        [ $attempt -lt 3 ] && sleep "$wait" && wait=$((wait * 2))
+        attempt=$((attempt + 1))
     done
 
-    log_msg "error" "Failed after 3 attempts, queuing"
+    log_msg error "Send failed, queuing message"
     queue_message "$text"
     return 1
 }
 
-send_message() {
-    send_message_with_retry "$@"
-}
-
+# Queue message for later delivery
 queue_message() {
     local msg="$1"
-    mkdir -p "$BOT_DIR/queue"
-    echo "$msg" > "$BOT_DIR/queue/$(date +%s)_$$.msg" 2>/dev/null || true
-    log_msg "info" "Message queued"
+    mkdir -p "$QUEUE_DIR"
+    echo "$msg" > "$QUEUE_DIR/$(date +%s)_$$.msg" 2>/dev/null || true
+    log_msg info "Message queued"
 }
 
+# Process offline queue
 process_queue() {
-    [ ! -d "$BOT_DIR/queue" ] && return 0
+    [ -d "$QUEUE_DIR" ] || return 0
 
     local count=0
-    for msg_file in "$BOT_DIR/queue"/*.msg 2>/dev/null; do
-        [ ! -f "$msg_file" ] && continue
+    for msg_file in "$QUEUE_DIR"/*.msg 2>/dev/null; do
+        [ -f "$msg_file" ] || continue
 
-        local msg=$(cat "$msg_file")
-        if send_message_with_retry "$msg" "HTML"; then
+        local msg=$(cat "$msg_file" 2>/dev/null)
+        [ -z "$msg" ] && { rm -f "$msg_file"; continue; }
+
+        if send_message "$msg" "HTML"; then
             rm -f "$msg_file"
             count=$((count + 1))
             sleep 1
         fi
     done
 
-    [ $count -gt 0 ] && log_msg "info" "Processed $count queued messages"
+    [ $count -gt 0 ] && log_msg info "Processed $count queued messages"
 }
 
-check_dependencies() {
-    local missing=""
-    for cmd in curl grep awk sed logger; do
-        if ! command -v "$cmd" >/dev/null 2>&1; then
-            missing="$missing $cmd"
-        fi
-    done
-
-    if [ -n "$missing" ]; then
-        echo "ERROR: Missing commands:$missing" >&2
-        return 1
-    fi
-    return 0
-}
-
+# Cache operations with TTL
 cache_set() {
     local key="$1" value="$2" ttl="${3:-300}"
-    mkdir -p "$BOT_DIR/cache"
-    printf '%s
-%d
-' "$value" "$(($(date +%s) + ttl))" > "$BOT_DIR/cache/$key" 2>/dev/null || true
+    mkdir -p "$CACHE_DIR"
+    echo "$value" > "$CACHE_DIR/$key" 2>/dev/null || true
+    echo "$(($(date +%s) + ttl))" >> "$CACHE_DIR/$key" 2>/dev/null || true
 }
 
 cache_get() {
-    local key="$1" cache_file="$BOT_DIR/cache/$key"
-    [ -f "$cache_file" ] || return 1
-    local expiry=$(tail -1 "$cache_file" 2>/dev/null || echo 0)
-    if [ "$expiry" -lt "$(date +%s)" ]; then
-        rm -f "$cache_file"
-        return 1
-    fi
-    head -1 "$cache_file"
+    local key="$1" file="$CACHE_DIR/$key"
+    [ -f "$file" ] || return 1
+    local expiry=$(tail -1 "$file" 2>/dev/null || echo 0)
+    [ "$expiry" -ge "$(date +%s)" ] || { rm -f "$file"; return 1; }
+    head -1 "$file"
 }
 
 cache_del() {
-    rm -f "$BOT_DIR/cache/$1"
+    rm -f "$CACHE_DIR/$1" 2>/dev/null || true
 }
 
+# Main
 load_config
-check_dependencies || exit 1
