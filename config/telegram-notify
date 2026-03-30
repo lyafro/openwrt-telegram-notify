@@ -1,0 +1,4 @@
+config notify 'default'
+	option token ''
+	option chat_id ''
+	option enabled '0'

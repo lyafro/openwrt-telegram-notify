@@ -1,0 +1,6 @@
+0 * * * * /opt/telegram-notify/cron.sh sysmon_alert >/dev/null 2>&1
+0 9 * * * /opt/telegram-notify/cron.sh sysmon_stats >/dev/null 2>&1
+0 8 * * * /opt/telegram-notify/cron.sh firmware >/dev/null 2>&1
+0 12 * * * /opt/telegram-notify/cron.sh network >/dev/null 2>&1
+*/5 * * * * /opt/telegram-notify/cron.sh ssh >/dev/null 2>&1
+*/3 * * * * /opt/telegram-notify/cron.sh config >/dev/null 2>&1
