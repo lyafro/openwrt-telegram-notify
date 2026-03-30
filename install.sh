@@ -39,8 +39,15 @@ for f in "$BOT_DIR"/plugins/*.sh; do
     chmod 755 "$f"
 done
 
-cp hotplug/98-telegram-notify /etc/hotplug.d/
-chmod 755 /etc/hotplug.d/98-telegram-notify
+mkdir -p /etc/hotplug.d/iface
+mkdir -p /etc/hotplug.d/dhcp
+mkdir -p /etc/hotplug.d/hostapd
+cp hotplug/98-telegram-notify /etc/hotplug.d/iface/98-telegram-notify
+cp hotplug/98-telegram-notify /etc/hotplug.d/dhcp/98-telegram-notify
+cp hotplug/98-telegram-notify /etc/hotplug.d/hostapd/98-telegram-notify
+chmod 755 /etc/hotplug.d/iface/98-telegram-notify
+chmod 755 /etc/hotplug.d/dhcp/98-telegram-notify
+chmod 755 /etc/hotplug.d/hostapd/98-telegram-notify
 
 mkdir -p /etc/config
 if [ ! -f /etc/config/telegram-notify ]; then
