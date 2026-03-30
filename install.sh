@@ -41,13 +41,13 @@ done
 
 mkdir -p /etc/hotplug.d/iface
 mkdir -p /etc/hotplug.d/dhcp
-mkdir -p /etc/hotplug.d/hostapd
+mkdir -p /etc/hotplug.d/net
 cp hotplug/98-telegram-notify /etc/hotplug.d/iface/98-telegram-notify
 cp hotplug/98-telegram-notify /etc/hotplug.d/dhcp/98-telegram-notify
-cp hotplug/98-telegram-notify /etc/hotplug.d/hostapd/98-telegram-notify
+cp hotplug/98-telegram-notify /etc/hotplug.d/net/98-telegram-notify
 chmod 755 /etc/hotplug.d/iface/98-telegram-notify
 chmod 755 /etc/hotplug.d/dhcp/98-telegram-notify
-chmod 755 /etc/hotplug.d/hostapd/98-telegram-notify
+chmod 755 /etc/hotplug.d/net/98-telegram-notify
 
 mkdir -p /etc/config
 if [ ! -f /etc/config/telegram-notify ]; then
