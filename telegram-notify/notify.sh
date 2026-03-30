@@ -103,7 +103,7 @@ _notify() {
     while [ $attempt -le 3 ]; do
         local response
         response="$(curl -s --max-time "$CURL_TIMEOUT" --connect-timeout 5 \
-            --resolve "api.telegram.org:443:149.154.167.220" \
+            # --resolve "api.telegram.org:443:149.154.167.220" \
             -X POST "https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage" \
             --data-urlencode "chat_id=$TELEGRAM_CHAT_ID" \
             --data-urlencode "text=$text" \
